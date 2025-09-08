@@ -71,11 +71,14 @@ This project is more than just a data logger. It demonstrates:
 - Signal processing on MCU  
 - Reliable inter-MCU communication (UART framing, error handling)  
 - IoT integration with ESP32 and WebSocket server  
-- Frontend visualization with Chart.js  
+- Frontend visualization with Chart.js 
 
 ---
 
 ## ⚡ Demo
+
+ ![Recording 2025-09-08 232132_____2](https://github.com/user-attachments/assets/c689e67f-9eed-45a6-b1df-cf5784dc7270)
+
 - Left Side: Real-time sine waveforms (Voltage, Current)  
 - Right Side: Numeric stats (Power, Vrms, Irms, Temp)  
 - Updates live via WebSockets  
