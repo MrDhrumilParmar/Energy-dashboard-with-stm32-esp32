@@ -1,0 +1,9 @@
+../AppFiles/Src/process.c:32:6:parameterCalculations	1
+../AppFiles/Src/process.c:34:6:setInitVariable	1
+../AppFiles/Src/process.c:36:6:RTOSOneTimeInit	6
+../AppFiles/Src/process.c:78:6:ProcessOneTimeInit	1
+../AppFiles/Src/process.c:99:6:LED_Green_Handler	2
+../AppFiles/Src/process.c:125:6:LED_Red_Handler	2
+../AppFiles/Src/process.c:154:6:Print_Handler	2
+../AppFiles/Src/process.c:181:13:Para_Calc_Handler	1
+../AppFiles/Src/process.c:206:6:HAL_ADC_ConvCpltCallback	2
