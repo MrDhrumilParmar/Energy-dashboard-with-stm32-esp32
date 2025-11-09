@@ -1,0 +1,19 @@
+!SESSION 2025-10-22 14:40:14.533 -----------------------------------------------
+eclipse.buildId=Version 1.19.0
+java.version=21.0.3
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  D:\RTOS STM Project\Energy-dashboard-with-stm32-esp32\STM32_RTOS\015Task2_ADC_USART\.project
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 D:\RTOS STM Project\Energy-dashboard-with-stm32-esp32\STM32_RTOS\015Task2_ADC_USART\.project
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2025-10-22 14:40:54.813
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2025-10-22 14:40:54.817
+!MESSAGE Log4j2 initialized with config file D:\RTOS STM Project\Energy-dashboard-with-stm32-esp32\STM32_RTOS\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2025-10-22 14:41:03.123
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2025-10-22 14:41:19.918
+!MESSAGE Indexed '015Task2_ADC_USART' (32 sources, 175 headers) in 12.6 sec: 17,182 declarations; 77,639 references; 5 unresolved inclusions; 230 syntax errors; 1,634 unresolved names (1.7%)
