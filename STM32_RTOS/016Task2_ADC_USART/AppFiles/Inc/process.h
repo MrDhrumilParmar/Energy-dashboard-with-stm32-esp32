@@ -26,6 +26,36 @@
 #define MAX_LEN		32
 
 
+typedef struct {
+	uint32_t Vdc;
+	uint32_t Idc;
+	uint32_t Pow;
+	uint32_t Temprature;
+} Motor_t;
+
+typedef enum {
+	HEALTHY = 0,
+	FLT_UNDER_VOLT,
+	FLT_UNDER_CURR,
+	FLT_UNDER_POW,
+	FLT_UNDER_TEMP,
+	FLT_OVER_VOLT,
+	FLT_OVER_CURR,
+	FLT_OVER_POW,
+	FLT_OVER_TEMP
+} FaultCode_e;
+
+// Fault Bits for Event Group
+#define FAULT_OVER_VDC_EVENTBIT (1 << 0)
+#define FAULT_OVER_IDC_EVENTBIT (1 << 1)
+#define FAULT_OVER_POW_EVENTBIT (1 << 2)
+#define FAULT_OVER_TEMP_EVENTBIT (1 << 3)
+
+#define FAULT_UNDER_VDC_EVENTBIT (1 << 4)
+#define FAULT_UNDER_IDC_EVENTBIT (1 << 5)
+#define FAULT_UNDER_POW_EVENTBIT (1 << 6)
+#define FAULT_UNDER_TEMP_EVENTBIT (1 << 7)
+
 
 #ifdef _PROCESS_
 
