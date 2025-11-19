@@ -1,7 +1,4 @@
-
 #include "measurement.h"
-
-
 
 //**********************************************
 // 					Notes
@@ -20,10 +17,43 @@
  * */
 
 
+//*********************************************************************************************************
+//									Feature Macros
+//*********************************************************************************************************
+
+
+
+
+
+
+#define ULLINT_MAX			18446744073709551615ULL
 #define F_REF				60.0f
 
 #define DWT_CTRL        (*(volatile uint32_t*)0XE0001000)
 #define MAX_LEN		32
+
+#define MAX_PRINT_LEN   32     /* must match Print_Handler's MAX_LEN */
+#define TELEMETRY_QUEUE_LEN  8 
+
+#define HEARTBEAT_WINDOW_MS         200   // how often supervisor wakes/checks
+#define HEARTBEAT_TIMEOUT_MS        400   // if no heartbeat within this threshold -> stall
+
+#define LOG_IN_QUEUE_LEN         32   // number of incoming log entries to buffer
+#define FLASH_BATCH_SIZE         8    // write up to this many entries in one flash write
+
+#define MOTOR_UNDER_VDC_LIM			((uint32_t)190)	// in Volt
+#define MOTOR_UNDER_IDC_LIM			((uint32_t)1)	// in Amp
+#define MOTOR_UNDER_POW_LIM			((uint32_t)200) // in Watt
+#define MOTOR_UNDER_TEMPRATURE_LIM	((uint32_t)10)	// in Celsius
+
+#define MOTOR_OVER_VDC_LIM			((uint32_t)250)		// in Volt
+#define MOTOR_OVER_IDC_LIM			((uint32_t)6)		// in Amp
+#define MOTOR_OVER_POW_LIM			((uint32_t)1200) 	// in Watt
+#define MOTOR_OVER_TEMPRATURE_LIM	((uint32_t)100)		// in Celsius
+
+#define	get_timestamp() (uint32_t)xTaskGetTickCount()
+
+
 
 
 typedef struct {
@@ -42,20 +72,58 @@ typedef enum {
 	FLT_OVER_VOLT,
 	FLT_OVER_CURR,
 	FLT_OVER_POW,
-	FLT_OVER_TEMP
+	FLT_OVER_TEMP,
+	FLT_TASK_STALLED
 } FaultCode_e;
 
 // Fault Bits for Event Group
-#define FAULT_OVER_VDC_EVENTBIT (1 << 0)
-#define FAULT_OVER_IDC_EVENTBIT (1 << 1)
-#define FAULT_OVER_POW_EVENTBIT (1 << 2)
-#define FAULT_OVER_TEMP_EVENTBIT (1 << 3)
+typedef enum {
+	FAULT_OVER_VDC_EVENTBIT = (1 << 0),
+	FAULT_OVER_IDC_EVENTBIT = (1 << 1),
+	FAULT_OVER_POW_EVENTBIT = (1 << 2),
+	FAULT_OVER_TEMP_EVENTBIT = (1 << 3),
 
-#define FAULT_UNDER_VDC_EVENTBIT (1 << 4)
-#define FAULT_UNDER_IDC_EVENTBIT (1 << 5)
-#define FAULT_UNDER_POW_EVENTBIT (1 << 6)
-#define FAULT_UNDER_TEMP_EVENTBIT (1 << 7)
+	FAULT_UNDER_VDC_EVENTBIT = (1 << 4),
+	FAULT_UNDER_IDC_EVENTBIT = (1 << 5),
+	FAULT_UNDER_POW_EVENTBIT = (1 << 6),
+	FAULT_UNDER_TEMP_EVENTBIT = (1 << 7),
+	FAULT_TASK_STALLED = (1 << 8)
+} FaultEventBit_e; // Event Bit Stream
 
+typedef enum {
+	HB_CONTROL_TASK_BIT = (1 << 0),
+	HB_FAULT_TASK_BIT = (1 << 1),
+	HB_COMM_TASK_BIT = (1 << 2),
+	HB_LOG_TASK_BIT = (1 << 3),
+
+	HB_RESERVE5_TASK_BIT = (1 << 4),
+	HB_RESERVE6_TASK_BIT = (1 << 5),
+	HB_RESERVE7_TASK_BIT = (1 << 6),
+	HB_RESERVE8_TASK_BIT = (1 << 7),
+
+} HeartbitTaskBit_e; // Event Bit Stream
+
+typedef enum {
+	LOG_DEBUG = 0, LOG_INFO, LOG_WARN, LOG_ERROR,
+} LogLevel_t;
+
+typedef struct {
+	uint32_t seq; /* optional sequence number */
+	TickType_t ts; /* tick timestamp when log was created/received */
+	LogLevel_t level;
+	char msg[MAX_PRINT_LEN]; /* short message; keep <= 32 for stack/queue sizing */
+} LogEntry_t;
+
+typedef struct {
+	uint8_t fltFlag;
+	// 1 : fault seq i.e. FAULT:
+	// 0 : normal seq i.e. NV:M1:....
+	uint32_t seq; /* optional sequence number */
+	Motor_t m1;
+	Motor_t m2;
+	Motor_t m3;
+
+} Telemetry_t;
 
 #ifdef _PROCESS_
 
@@ -66,19 +134,44 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 
-extern void SEGGER_UART_init(uint32_t);
+extern void SEGGER_UART_init (uint32_t);
 
 
-static void LED_Green_Handler(void *parameters);
-static void LED_Red_Handler(void *parameters);
-static void Para_Calc_Handler(void *param);
-static void Print_Handler(void *param);
+static void LED_Green_Handler (void* parameters);
+static void LED_Red_Handler (void* parameters);
+static void Para_Calc_Handler (void* param);
+static void Print_Helper_Handler (void* param);
+static void Print_Handler (void* param);
+static void Fault_Task_Handler (void* param);
+static void Supervisor_Task_Handler (void* param);
+static void Flash_Task_Handler (void* param);
+static void Log_Task_Handler (void* param);
 
-void parameterCalculations(void);
-void RTOSOneTimeInit(void);
-void ProcessOneTimeInit(void);
+
+void parameterCalculations (void);
+void RTOSOneTimeInit (void);
+void ProcessOneTimeInit (void);
+
+
+
+FaultCode_e checkMotorPara (Motor_t* m );
+LogEntry_t make_log(uint32_t fault_bit, uint32_t timestamp) ;
+void checkFaultForHeartbeat(uint32_t *NOTIFY_VAL, TickType_t *last_heartbeat,	TickType_t *now, uint32_t HEARTBEAT_BIT,  const TickType_t *timeout_ticks);
+static BaseType_t flash_write_block(const void *buf, size_t len);
+void refresh_watchdog(void);
+void sendHeartBeat (FaultEventBit_e hb_bit);
+BaseType_t Log_Task_Send(const LogEntry_t *entry, TickType_t ticks_to_wait);
 
 #else
+
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_adc2;
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
+extern void SEGGER_UART_init (uint32_t);
+
 extern void RTOSOneTimeInit(void);
 extern void ProcessOneTimeInit(void);
 #endif

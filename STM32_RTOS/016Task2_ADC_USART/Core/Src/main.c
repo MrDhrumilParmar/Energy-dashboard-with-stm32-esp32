@@ -31,7 +31,9 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-
+#if configUSE_TIMERS == 1
+UART_HandleTypeDef huart2;
+#endif
 // 	USE ANYONE AT A TIME
 //	SEGGER		:	1
 // 	Tera Term 	:	0
@@ -40,7 +42,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 
 /* USER CODE END PD */
 
@@ -59,8 +60,6 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
-
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -76,8 +75,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
-
 
   /* USER CODE END 1 */
 
@@ -106,11 +103,18 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+#if DEBUG_WITH_SEGGER == 1
+	SEGGER_UART_init(SEGGER_BAUD_RATE);
+#endif
+
 	//***********************************************************************
 	//							RTOS Init
 	//***********************************************************************
 	RTOSOneTimeInit();
 
+#if DEBUG_WITH_SEGGER == 1
+    SEGGER_SYSVIEW_Conf();
+#endif
 	//***********************************************************************
 	//							 Process One Time Init
 	//***********************************************************************

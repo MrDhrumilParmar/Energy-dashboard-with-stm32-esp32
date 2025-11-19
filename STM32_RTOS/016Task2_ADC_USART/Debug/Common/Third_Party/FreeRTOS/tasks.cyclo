@@ -1,6 +1,6 @@
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:737:16:xTaskCreate	4
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:828:13:prvInitialiseNewTask	7
-D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1079:13:prvAddNewTaskToReadyList	7
+D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1079:13:prvAddNewTaskToReadyList	8
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1165:10:vTaskDelete	9
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1260:16:xTaskDelayUntil	11
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1347:10:vTaskDelay	4
@@ -12,7 +12,7 @@ D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1717:10:
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1823:23:prvTaskIsTaskSuspended	5
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1869:10:vTaskResume	6
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1923:16:xTaskResumeFromISR	5
-D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1998:6:vTaskStartScheduler	3
+D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:1998:6:vTaskStartScheduler	4
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2126:6:vTaskEndScheduler	1
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2137:6:vTaskSuspendAll	1
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2221:12:xTaskResumeAll	11
@@ -24,7 +24,7 @@ D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2533:17:
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2608:18:xTaskGetIdleTaskHandle	2
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2638:12:xTaskCatchUpTicks	2
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:2736:12:xTaskIncrementTick	11
-D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:3021:6:vTaskSwitchContext	4
+D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:3021:6:vTaskSwitchContext	5
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:3097:6:vTaskPlaceOnEventList	2
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:3115:6:vTaskPlaceOnUnorderedEventList	3
 D:/RTOS STM Project/RTOS Playground/Common/Third_Party/FreeRTOS/tasks.c:3176:12:xTaskRemoveFromEventList	4

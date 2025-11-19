@@ -26,6 +26,11 @@ AppFiles/Src \
 Common/Third_Party/FreeRTOS \
 Common/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F \
 Common/Third_Party/FreeRTOS/portable/MemMang \
+Common/Third_Party/SEGGER/Config \
+Common/Third_Party/SEGGER/OS \
+Common/Third_Party/SEGGER/Rec \
+Common/Third_Party/SEGGER/SEGGER \
+Common/Third_Party/SEGGER/SEGGER/Syscalls \
 Core/Src \
 Core/Startup \
 Drivers/STM32F4xx_HAL_Driver/Src \

@@ -46,6 +46,19 @@
 	extern uint32_t SystemCoreClock;
 #endif
 
+//*******************************************************************************************
+//						My Implementation For Segger STARTS
+//*******************************************************************************************
+#define DEBUG_WITH_SEGGER				1/**/
+
+#if DEBUG_WITH_SEGGER == 1
+		#define SEGGER_BAUD_RATE			115200
+#endif
+//*******************************************************************************************
+//						My Implementation For Segger ENDS
+//*******************************************************************************************
+
+
 #define configUSE_PREEMPTION			1
 #define configUSE_IDLE_HOOK				0 // 1 #CHANGED
 #define configUSE_TICK_HOOK				0 // 1 #CHANGED
@@ -53,7 +66,7 @@
 #define configTICK_RATE_HZ				( ( TickType_t ) 3000 )
 #define configMAX_PRIORITIES			( 5 )
 #define configMINIMAL_STACK_SIZE		( ( unsigned short ) 130 )
-#define configTOTAL_HEAP_SIZE			( ( size_t ) ( 12 * 1024 ) ) // ( ( size_t ) ( 75 * 1024 ) ) #CHANGED
+#define configTOTAL_HEAP_SIZE			( ( size_t ) ( 75 * 1024 ) ) // ( ( size_t ) ( 75 * 1024 ) ) #CHANGED
 #define configMAX_TASK_NAME_LEN			( 10 )
 #define configUSE_TRACE_FACILITY		1
 #define configUSE_16_BIT_TICKS			0
@@ -126,6 +139,9 @@ standard names. */
 #define xPortPendSVHandler PendSV_Handler
 #define xPortSysTickHandler SysTick_Handler
 
-//#include "SEGGER_SYSVIEW_FreeRTOS.h" // ADDED #CHANGED
+#if DEBUG_WITH_SEGGER == 1
+#include "SEGGER_SYSVIEW_FreeRTOS.h" // ADDED #CHANGED
+#endif
+
 #endif /* FREERTOS_CONFIG_H */
 

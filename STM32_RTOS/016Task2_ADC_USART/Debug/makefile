@@ -12,6 +12,11 @@ RM := rm -rf
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
+-include Common/Third_Party/SEGGER/SEGGER/Syscalls/subdir.mk
+-include Common/Third_Party/SEGGER/SEGGER/subdir.mk
+-include Common/Third_Party/SEGGER/Rec/subdir.mk
+-include Common/Third_Party/SEGGER/OS/subdir.mk
+-include Common/Third_Party/SEGGER/Config/subdir.mk
 -include Common/Third_Party/FreeRTOS/portable/MemMang/subdir.mk
 -include Common/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F/subdir.mk
 -include Common/Third_Party/FreeRTOS/subdir.mk
