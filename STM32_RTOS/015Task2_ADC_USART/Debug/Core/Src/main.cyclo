@@ -1,0 +1,9 @@
+../Core/Src/main.c:112:5:main	6
+../Core/Src/main.c:219:6:SystemClock_Config	4
+../Core/Src/main.c:271:6:LED_Green_Handler	2
+../Core/Src/main.c:297:6:LED_Red_Handler	2
+../Core/Src/main.c:326:6:Print_Handler	2
+../Core/Src/main.c:353:13:Para_Calc_Handler	1
+../Core/Src/main.c:377:6:HAL_ADC_ConvCpltCallback	3
+../Core/Src/main.c:397:6:HAL_TIM_PeriodElapsedCallback	2
+../Core/Src/main.c:415:6:Error_Handler	1
