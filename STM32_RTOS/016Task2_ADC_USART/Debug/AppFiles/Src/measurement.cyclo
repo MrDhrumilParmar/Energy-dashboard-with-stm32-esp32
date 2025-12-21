@@ -1,0 +1,4 @@
+../AppFiles/Src/measurement.c:22:6:adcBufferInit	1
+../AppFiles/Src/measurement.c:48:6:paraCalcAdc1	5
+../AppFiles/Src/measurement.c:86:6:paraCalcAdc2	5
+../AppFiles/Src/measurement.c:114:6:rmsCalulation	3

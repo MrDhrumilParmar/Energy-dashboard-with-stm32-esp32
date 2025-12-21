@@ -1,392 +1,334 @@
 #include <Arduino.h>
-
-// // UART connection with STM32
-// #define STM32_RX_PIN 16  // ESP32 RX -> STM32 TX
-// #define STM32_TX_PIN 17  // ESP32 TX -> STM32 RX (optional)
-// HardwareSerial stm32Serial (1);
-
-// // Variables for segregated data
-// int vrms_int = 0, irms_int = 0;          // From NV
-// int power_int = 0, temperature_int = 0;  // From NPT
-// int sine_voltage = 0;                    // From SV
-// int sine_current = 0;                    // From SI
-
-// void setup () {
-//     Serial.begin (115200); // Debug monitor
-//     stm32Serial.begin (115200, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
-
-//     Serial.println ("ESP32 ready to parse STM32 UART data...");
-// }
-
-// void loop () {
-//     if (stm32Serial.available ()) {
-//         String line = stm32Serial.readStringUntil ('\n');
-//         line.trim ();  // remove \r, spaces
-
-//         if (line.startsWith ("NV:")) {
-//             sscanf (line.c_str (), "NV:%d %d", &vrms_int, &irms_int);
-//             Serial.printf ("[NV] Vrms=%d, Irms=%d\n", vrms_int, irms_int);
-
-//         } else if (line.startsWith ("NPT:")) {
-//             sscanf (line.c_str (), "NPT:%d %d", &power_int, &temperature_int);
-//             Serial.printf ("[NPT] Power=%d, Temp=%d\n", power_int, temperature_int);
-
-//         } else if (line.startsWith ("SV:")) {
-//             sscanf (line.c_str (), "SV:%d", &sine_voltage);
-//             Serial.printf ("[SV] Voltage=%d\n", sine_voltage);
-
-//         } else if (line.startsWith ("SI:")) {
-//             sscanf (line.c_str (), "SI:%d", &sine_current);
-//             Serial.printf ("[SI] Current=%d\n", sine_current);
-
-//         } else {
-//             Serial.printf ("Unknown message: %s\n", line.c_str ());
-//         }
-//     }
-// }
-
-#include <WiFi.h>
+#include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
+#include <WiFi.h>
+#include <map>
+#include <math.h>
+#include "web.h"
 
-// ==== WiFi Config ====
-const char* ssid = "LAPTOP-CCB26F1U 5621";
-const char* password = "12345678";
+// ================= USER CONFIG =================
+#define WIFI_SSID "LAPTOP-CCB26F1U 5621"
+#define WIFI_PASSWORD "12345678"
 
-// ==== Web Server + WebSocket ====
+// Toggle for testing
+#define USE_DUMMY false
+
+// UART pins (only used when USE_DUMMY==false)
+#define STM32_RX_PIN 16
+#define STM32_TX_PIN 17
+#define STM32_BAUD 115200
+
+// Aggregation / publish interval (ms)
+#define AGG_MS 100 // 100 ms -> 10 Hz UI update
+
 WebServer server (80);
-WebSocketsServer webSocket = WebSocketsServer (81);
-
-// ==== UART Config ====
-#define STM32_RX_PIN 16  // ESP32 RX -> STM32 TX
-#define STM32_TX_PIN 17  // ESP32 TX -> STM32 RX (optional)
+WebSocketsServer webSocket (81);
 HardwareSerial stm32Serial (1);
 
-// ==== Latest values ====
-int NV_v = 0, NV_i = 0;
-int NPT_p = 0, NPT_t = 0;
-float SV = 0.0f;   // sine voltage (scaled)
-float SI = 0.0f;   // sine current (scaled)
-
-// ==== HTML Page ====
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>STM32 Live Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 12px; background:#f6f7fb; color:#222; }
-    .container { display: flex; gap: 12px; height: calc(100vh - 24px); }
-    /* left column - reduced width */
-    .left { flex: 0.8; display:flex; flex-direction: column; gap:12px; }
-    /* make chart cards compact: fixed height so charts are shorter */
-    .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding:12px; display:flex; flex-direction:column; }
-    .chart-card { height: 200px; max-height: 220px; }
-    .chart-title { font-weight:600; margin-bottom:8px; }
-    /* right column - increased width */
-    .right { width: 500px; display:flex; flex-direction: column; gap:12px; }
-    .stat { background:#fff; border-radius:8px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
-    .stat h3 { margin:0 0 6px 0; font-size:14px; color:#666; font-weight:600; }
-    .stat .value { font-size:20px; font-weight:700; color:#111; }
-    .small { font-size:12px; color:#888; margin-top:6px; }
-    canvas { width:100% !important; height:100% !important; }
-    footer { margin-top:8px; font-size:12px; color:#666; }
-    @media (max-width: 900px) {
-      .container { flex-direction: column; height: auto; }
-      .right { width: 100%; }
-      .chart-card { height: 200px; }
+// ----------------- ring buffer (byte-level) -----------------
+class RingBuf {
+    public:
+    RingBuf (size_t capacity = 4096) : cap (capacity) {
+        buf = new uint8_t[cap];
+        head = tail = 0;
     }
-  </style>
-</head>
-<body>
-  <h2>STM32 Realtime Dashboard</h2>
-  <div class="container">
-    <div class="left">
-      <div class="chart-card">
-        <div class="chart-title">Sine Voltage (V)</div>
-        <canvas id="chartVoltage"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Sine Current (A)</div>
-        <canvas id="chartCurrent"></canvas>
-      </div>
-    </div>
-    <div class="right">
-      <div class="stat">
-        <h3>Normal Voltage</h3>
-        <div id="nv" class="value">-- V, -- A</div>
-        <div class="small">NV: RMS Voltage and RMS Current</div>
-      </div>
-      <div class="stat">
-        <h3>Normal Power & Temp</h3>
-        <div id="npt" class="value">-- W, -- °C</div>
-        <div class="small">NPT: Power and Temperature</div>
-      </div>
-      <div class="stat">
-        <h3>Sine Voltage (instant)</h3>
-        <div id="sv" class="value">-- V</div>
-        <div class="small">SV from STM32 (scaled)</div>
-      </div>
-      <div class="stat">
-        <h3>Sine Current (instant)</h3>
-        <div id="si" class="value">-- A</div>
-        <div class="small">SI from STM32 (scaled)</div>
-      </div>
-      <footer>Updated via WebSocket</footer>
-    </div>
-  </div>
-<script>
-(() => {
-  const maxPoints = 120; // keep last 120 points (~buffer)
-  let dataPointCounter = 0; // counter for x-axis labels
-  
-  // Create voltage chart
-  const ctxV = document.getElementById('chartVoltage').getContext('2d');
-  const voltageChart = new Chart(ctxV, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [{
-        label: 'Sine Voltage (V)',
-        data: [],
-        fill: false,
-        borderWidth: 2,
-        pointRadius: 0,
-        cubicInterpolationMode: 'monotone',
-        tension: 0.4,
-        borderColor: 'rgb(37, 99, 235)'
-      }]
-    },
-    options: {
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { display: true },
-        y: { display: true, suggestedMin: -5, suggestedMax: 5 }
-      },
-      plugins: { legend: { display: false } }
+    ~RingBuf () { delete[] buf; }
+    size_t available () const {
+        if (head >= tail)
+            return head - tail;
+        return cap - tail + head;
     }
-  });
-  
-  // Create current chart
-  const ctxI = document.getElementById('chartCurrent').getContext('2d');
-  const currentChart = new Chart(ctxI, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [{
-        label: 'Sine Current (A)',
-        data: [],
-        fill: false,
-        borderWidth: 2,
-        pointRadius: 0,
-        cubicInterpolationMode: 'monotone',
-        tension: 0.4,
-        borderColor: 'rgb(220, 38, 38)'
-      }]
-    },
-    options: {
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { display: true },
-        y: { display: true, suggestedMin: -5, suggestedMax: 5 }
-      },
-      plugins: { legend: { display: false } }
+    bool writeByte (uint8_t b) {
+        size_t next = (head + 1) % cap;
+        if (next == tail)
+            return false; // full
+        buf[head] = b;
+        head = next;
+        return true;
     }
-  });
-  
-  // WebSocket connection
-  const wsUrl = "ws://" + location.hostname + ":81/";
-  console.log("Connecting to WS", wsUrl);
-  const ws = new WebSocket(wsUrl);
-  ws.onopen = () => console.log("WS open");
-  ws.onclose = () => console.log("WS closed");
-  ws.onerror = (e) => console.error("WS error", e);
-  
-  ws.onmessage = (evt) => {
-    // Expect JSON: {"NV_v":..,"NV_i":..,"NPT_p":..,"NPT_t":..,"SV":..,"SI":..}
-    try {
-      const d = JSON.parse(evt.data);
-      // update right-side numeric UI
-      if (d.NV_v !== undefined && d.NV_i !== undefined) {
-        document.getElementById('nv').innerText = d.NV_v + " V, " + d.NV_i + " A";
-      }
-      if (d.NPT_p !== undefined && d.NPT_t !== undefined) {
-        document.getElementById('npt').innerText = d.NPT_p + " W, " + d.NPT_t + " °C";
-      }
-      if (d.SV !== undefined) {
-        document.getElementById('sv').innerText = Number(d.SV).toFixed(3) + " V";
-      }
-      if (d.SI !== undefined) {
-        document.getElementById('si').innerText = Number(d.SI).toFixed(3) + " A";
-      }
-      
-      // push to charts (SV -> voltageChart, SI -> currentChart)
-      dataPointCounter++;
-      const label = dataPointCounter.toString(); // use simple number instead of time
-      
-      // Voltage chart
-      if (d.SV !== undefined) {
-        voltageChart.data.labels.push(label);
-        voltageChart.data.datasets[0].data.push(Number(d.SV));
-        if (voltageChart.data.labels.length > maxPoints) {
-          voltageChart.data.labels.shift();
-          voltageChart.data.datasets[0].data.shift();
+    // read up to n bytes into dest, return bytes read
+    size_t readBytes (uint8_t* dest, size_t n) {
+        size_t r = 0;
+        while (r < n && available ()) {
+            dest[r++] = buf[tail];
+            tail = (tail + 1) % cap;
         }
-        voltageChart.update('none');
-      }
-      // Current chart
-      if (d.SI !== undefined) {
-        currentChart.data.labels.push(label);
-        currentChart.data.datasets[0].data.push(Number(d.SI));
-        if (currentChart.data.labels.length > maxPoints) {
-          currentChart.data.labels.shift();
-          currentChart.data.datasets[0].data.shift();
-        }
-        currentChart.update('none');
-      }
-    } catch (err) {
-      console.error("WS JSON parse error", err, evt.data);
+        return r;
     }
-  };
-})();
-</script>
-</body>
-</html>
-)rawliteral";
+    // read single byte if available
+    bool readByte (uint8_t& b) {
+        if (!available ())
+            return false;
+        b = buf[tail];
+        tail = (tail + 1) % cap;
+        return true;
+    }
+    // clear buffer (useful for debug)
+    void clear () { head = tail = 0; }
 
+    private:
+    uint8_t* buf;
+    size_t cap;
+    size_t head, tail;
+};
 
-// ==== Serve Web Page ====
-void handleRoot () {
-    server.send_P (200, "text/html", index_html);
+static RingBuf ring (8192);
+
+// ----------------- data model -----------------
+struct Motor {
+    int V = 0;
+    int status = 0;
+    int current_mA = 0;
+    float current_A = 0.0f;
+    int rpm = 0;
+};
+
+// keep latest state per motor (thread-safe-ish in single-threaded ESP loop)
+std::map<String, Motor> motors;
+
+// ----------------- helper: build JSON from latest motor state
+// -----------------
+String buildJson () {
+    String out = "{\"motors\":{";
+    bool f = true;
+    for (auto& p : motors) {
+        if (!f)
+            out += ",";
+        f = false;
+        String name = p.first;
+        Motor m = p.second;
+        out += "\"" + name + "\":{";
+        out += "\"V\":" + String (m.V) + ",";
+        out += "\"status\":" + String (m.status) + ",";
+        out += "\"current_A\":" + String (m.current_A, 3) + ",";
+        out += "\"rpm\":" + String (m.rpm);
+        out += "}";
+    }
+    out += "}}";
+    return out;
 }
 
-// ==== WebSocket Event ====
-void onWebSocketEvent (uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+// safe broadcast (WebSocketsServer expects String&)
+void broadcastMotors () {
+    String payload = buildJson ();
+    webSocket.broadcastTXT (payload);
+}
+
+// ----------------- Parser: extract lines from ring buffer, parse NV lines
+// -----------------
+void parseAndUpdate () {
+    // read bytes until newline and parse each complete line
+    static char linebuf[256];
+    static size_t idx = 0;
+    uint8_t b;
+    // limit number of lines per call to avoid starvation (tune if needed)
+    int linesProcessed = 0;
+    const int MAX_LINES_PER_ITER = 10;
+
+    while (linesProcessed < MAX_LINES_PER_ITER && ring.readByte (b)) {
+        if (b == '\r')
+            continue;
+        if (b == '\n') {
+            if (idx == 0)
+                continue;
+            linebuf[idx] = 0;
+            String s (linebuf);
+            // parse "NV:M1: 220 03 0660 60"
+            // robust minimal parser
+            int p1 = s.indexOf (':'); // after NV
+            int p2 = s.indexOf (':', p1 + 1);
+            if (p1 > 0 && p2 > p1) {
+                String prefix = s.substring (0, p1);
+                String dev = s.substring (p1 + 1, p2);
+                dev.trim ();
+                String rest = s.substring (p2 + 1);
+                rest.trim ();
+                // split by spaces
+                int vals[8];
+                int vc = 0;
+                int start = 0;
+                while (start < (int)rest.length () && vc < 8) {
+                    int sp = rest.indexOf (' ', start);
+                    if (sp < 0)
+                        sp = rest.length ();
+                    String token = rest.substring (start, sp);
+                    token.trim ();
+                    if (token.length () > 0)
+                        vals[vc++] = token.toInt ();
+                    start = sp + 1;
+                }
+                if (prefix == "NV" && vc >= 4) {
+                    Motor m;
+                    m.V = vals[0];
+                    m.status = vals[1];
+                    m.current_mA = vals[2];
+                    m.current_A = m.current_mA / 1000.0f;
+                    m.rpm = vals[3];
+                    motors[dev] = m;
+                }
+            }
+            idx = 0;
+            linesProcessed++;
+        } else {
+            if (idx < sizeof (linebuf) - 1)
+                linebuf[idx++] = (char)b;
+            else
+                idx = 0; // overflow, drop
+        }
+    }
+}
+
+// ----------------- Dummy high-rate producer (writes into ring buffer)
+// -----------------
+unsigned long lastDummy = 0;
+void dummyProducer () {
+    // push many lines per second to simulate heavy UART (e.g., 200 Hz)
+    unsigned long now = millis ();
+    // produce bursts; adjust frequency here to simulate heavy data
+    if (now - lastDummy < 5)
+        return; // ~200 Hz
+    lastDummy = now;
+
+    static int phase = 0;
+    phase++;
+    // create three lines per cycle (vary values slightly)
+    char line[64];
+    int v1 = 220 + (int)(5.0 * sin (phase * 0.07));
+    int c1 = 500 + (int)(20.0 * sin (phase * 0.11));
+    int r1 = 600 + (int)(10.0 * sin (phase * 0.05));
+    snprintf (line, sizeof (line), "NV:M1: %d 3 %d %d\n", v1, c1, r1);
+    for (char* p = line; *p; ++p)
+        ring.writeByte ((uint8_t)*p);
+
+    int v2 = 219 + (int)(4.0 * sin (phase * 0.08));
+    int c2 = 480 + (int)(18.0 * sin (phase * 0.12));
+    int r2 = 590 + (int)(12.0 * sin (phase * 0.06));
+    snprintf (line, sizeof (line), "NV:M2: %d 3 %d %d\n", v2, c2, r2);
+    for (char* p = line; *p; ++p)
+        ring.writeByte ((uint8_t)*p);
+
+    int v3 = 221 + (int)(6.0 * sin (phase * 0.06));
+    int c3 = 520 + (int)(22.0 * sin (phase * 0.09));
+    int r3 = 610 + (int)(11.0 * sin (phase * 0.04));
+    snprintf (line, sizeof (line), "NV:M3: %d 3 %d %d\n", v3, c3, r3);
+    for (char* p = line; *p; ++p)
+        ring.writeByte ((uint8_t)*p);
+}
+
+// ----------------- WebSocket event -----------------
+void webSocketEvent (uint8_t num, WStype_t type, uint8_t* payload,
+    size_t length) {
     if (type == WStype_CONNECTED) {
-        Serial.printf ("Client %u connected\n", num);
+        Serial.printf ("WS client %u connected\n", num);
+    } else if (type == WStype_TEXT) {
+        // handle snapshot request etc.
+        String msg = String ((char*)payload);
+        if (msg.indexOf ("snapshot") >= 0) {
+            broadcastMotors ();
+        }
     }
 }
 
-// ==== Send JSON over WebSocket ====
-// Note: SV and SI are floats and formatted with 3 decimal places
-void sendData () {
-    char buffer[128];
-    snprintf (buffer, sizeof (buffer),
-        "{\"NV_v\":%d,\"NV_i\":%d,\"NPT_p\":%d,\"NPT_t\":%d,\"SV\":%.3f,\"SI\":%.3f}",
-        NV_v, NV_i, NPT_p, NPT_t, SV, SI);
-    webSocket.broadcastTXT (buffer);
-}
+// ----------------- Setup / Loop -----------------
+unsigned long lastAgg = 0;
 
-// ==== Setup ====
 void setup () {
-    Serial.begin (115200);
 
-    stm32Serial.begin (115200, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
+    Serial.begin (STM32_BAUD);
+    delay (50);
+    Serial.println ("Booting...");
 
-    WiFi.begin (ssid, password);
-    Serial.print ("Connecting to WiFi");
-    while (WiFi.status () != WL_CONNECTED) {
+    // --- TEMP: WiFi scan for debugging ---
+    Serial.println ("Scanning WiFi networks...");
+    int n = WiFi.scanNetworks ();
+    Serial.printf ("Found %d networks\n", n);
+    for (int i = 0; i < n; ++i) {
+        Serial.printf ("%d: '%s' (RSSI %d) encryption=%d\n", i, WiFi.SSID (i).c_str (),
+            WiFi.RSSI (i), WiFi.encryptionType (i));
+    }
+    // --- end scan ---
+
+    if (!USE_DUMMY) {
+        stm32Serial.begin (STM32_BAUD, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
+    }
+
+    // WiFi.begin (WIFI_SSID, WIFI_PASSWORD);
+    // Serial.print ("Connecting to WiFi");
+    // while (WiFi.status () != WL_CONNECTED) {
+
+    //     delay (200);
+    //     Serial.print (".");
+    // }
+
+    // ---- ADD THIS BLOCK ----
+    IPAddress local_IP (192, 168, 137, 50);
+    IPAddress gateway (192, 168, 137, 1);
+    IPAddress subnet (255, 255, 255, 0);
+
+    if (!WiFi.config (local_IP, gateway, subnet)) {
+        Serial.println ("STA Failed to configure static IP");
+    }
+    // ---- END ADD ----
+
+    // --- TEMP: WiFi scan for debugging ---
+    Serial.printf ("Attempting connect to '%s'\n", WIFI_SSID);
+    WiFi.begin (WIFI_SSID, WIFI_PASSWORD);
+    unsigned long start = millis ();
+    while (WiFi.status () != WL_CONNECTED && millis () - start < 15000) {
         delay (500);
         Serial.print (".");
     }
-    Serial.println ("\nConnected!");
+    Serial.println ();
+    Serial.printf ("WiFi.status()=%d, freeHeap=%u\n", WiFi.status (),
+        ESP.getFreeHeap ());
+    if (WiFi.status () == WL_CONNECTED) {
+        Serial.print ("Connected, IP: ");
+        Serial.println (WiFi.localIP ());
+    } else {
+        Serial.println ("Failed to connect within timeout");
+    }
+    // --- end scan ---
+
+    Serial.println ();
+    Serial.print ("IP: ");
     Serial.println (WiFi.localIP ());
 
-    server.on ("/", handleRoot);
+    server.on ("/", []() { server.send_P (200, "text/html", INDEX_HTML); });
+    server.onNotFound ([]() { server.send (404, "text/plain", "Not found"); });
     server.begin ();
 
     webSocket.begin ();
-    webSocket.onEvent (onWebSocketEvent);
+    webSocket.onEvent (webSocketEvent);
+
+    Serial.println ("Server ready");
 }
 
-// ==== Loop ====
 void loop () {
     server.handleClient ();
     webSocket.loop ();
 
-    // Read STM32 UART line
-        // Read STM32 UART line
-    if (stm32Serial.available ()) {
-        String line = stm32Serial.readStringUntil ('\n');
-        line.trim ();               // remove \r and whitespace
-        if (line.length () == 0) return;
-
-        Serial.println ("RX: " + line);
-
-        // Convert to a C string for robust parsing
-        const char* c = line.c_str ();
-        // find ':' position
-        const char* colon = strchr (c, ':');
-        if (colon == NULL) {
-            Serial.println ("Parse error: no ':' found");
-            sendData ();
-            return;
+    // Stage A: fast I/O: push bytes from UART to ring buffer (non-blocking)
+    if (!USE_DUMMY) {
+        while (stm32Serial.available ()) {
+            int c = stm32Serial.read ();
+            // try to write; if ring is full we drop bytes (keeps realtime safe)
+            ring.writeByte ((uint8_t)c);
         }
+    } else {
+        // in dummy mode produce high-rate data into ring
+        dummyProducer ();
+    }
 
-        // prefix length and prefix extraction
-        size_t prefix_len = colon - c;
-        String prefix = String (c, prefix_len);   // e.g. "SV", "NV", "NPT", "SI"
-        const char* numstr = colon + 1;          // numeric part starts after ':'
+    // Stage B: parse available complete lines (bounded work)
+    parseAndUpdate ();
 
-        // For tags with two numbers (NV, NPT) parse separately
-        if (prefix == "NV") {
-            // Expect "NV:<v> <i>" possibly with signs (but usually positive)
-            long v = 0, i = 0;
-            // use strtol twice
-            char* endptr = nullptr;
-            v = strtol (numstr, &endptr, 10);
-            while (*endptr == ' ') endptr++; // skip spaces
-            i = strtol (endptr, NULL, 10);
-            NV_v = (int)v;
-            NV_i = (int)i;
-            Serial.printf ("[NV] parsed v=%ld i=%ld\n", v, i);
-
-        } else if (prefix == "NPT") {
-            // Expect "NPT:<p> <t>"
-            long p = 0, t = 0;
-            char* endptr = nullptr;
-            p = strtol (numstr, &endptr, 10);
-            while (*endptr == ' ') endptr++;
-            t = strtol (endptr, NULL, 10);
-            NPT_p = (int)p;
-            NPT_t = (int)t;
-            Serial.printf ("[NPT] parsed p=%ld t=%ld\n", p, t);
-
-        } else if (prefix == "SV") {
-            // Expect "SV:<raw>" where raw is integer = value * 1000 (may be negative)
-            char* endptr = nullptr;
-            long raw = strtol (numstr, &endptr, 10);
-            // If no digits parsed, strtol sets endptr==numstr
-            if (endptr == numstr) {
-                Serial.println ("[SV] parse failed");
-            } else {
-                SV = (float)raw * 150.0f / 1000.0f;
-                Serial.printf ("[SV] raw=%ld -> %.3f V\n", raw, SV);
-            }
-
-        } else if (prefix == "SI") {
-            // Expect "SI:<raw>" where raw is integer = value * 1000 (may be negative)
-            char* endptr = nullptr;
-            long raw = strtol (numstr, &endptr, 10);
-            if (endptr == numstr) {
-                Serial.println ("[SI] parse failed");
-            } else {
-                SI = (float)raw * 15.0f / 1000.0f;
-                Serial.printf ("[SI] raw=%ld -> %.3f A\n", raw, SI);
-            }
-
-        } else {
-            Serial.printf ("Unknown prefix: %s\n", prefix.c_str ());
-        }
-
-        // Send updated values (even if only some changed)
-        sendData ();
+    // Stage C: aggregation/publish (on timer, decoupled from UART)
+    unsigned long now = millis ();
+    if (now - lastAgg >= AGG_MS) {
+        lastAgg = now;
+        // For simplicity we push the last values (no averaging yet). This is where
+        // you'd implement average/min/max.
+        broadcastMotors ();
     }
 }

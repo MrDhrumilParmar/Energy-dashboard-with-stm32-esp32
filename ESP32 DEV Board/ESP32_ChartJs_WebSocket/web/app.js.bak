@@ -1,0 +1,118 @@
+window.addEventListener("DOMContentLoaded", () => {
+    const UI_UPDATE_MS = 500; // ~5 Hz
+    let latest = null;
+
+    const ws = new WebSocket(`ws://${location.hostname}:81`);
+    ws.onmessage = (e) => (latest = JSON.parse(e.data));
+
+    function makeChart(id) {
+        return new Chart(document.getElementById(id), {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: "V",
+                        data: [],
+                        borderColor: "#1f77b4",
+                        yAxisID: "yV",
+                        pointRadius: 0,
+                    },
+                    {
+                        label: "I",
+                        data: [],
+                        borderColor: "#ff7f0e",
+                        yAxisID: "yI",
+                        pointRadius: 0,
+                    },
+                    {
+                        label: "P",
+                        data: [],
+                        borderColor: "#9467bd",
+                        yAxisID: "yP",
+                        pointRadius: 0,
+                    },
+                    {
+                        label: "T",
+                        data: [],
+                        borderColor: "#d62728",
+                        yAxisID: "yT",
+                        pointRadius: 0,
+                    },
+                ],
+            },
+            options: {
+                animation: false,
+                devicePixelRatio: 2,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        ticks: { maxTicksLimit: 30 },
+                        grid: { display: false },
+                    },
+                    yV: {
+                        min: 0,
+                        max: 250,
+                        position: "left",
+                        grid: { color: "#e0e0e0" },
+                    },
+                    yI: {
+                        min: 0,
+                        max: 5,
+                        position: "left",
+                        grid: { display: false },
+                    },
+                    yP: {
+                        min: 0,
+                        max: 2,
+                        position: "right",
+                        display: false,
+                    },
+                    yT: {
+                        min: 20,
+                        max: 80,
+                        position: "right",
+                        display: false,
+                    },
+                },
+            },
+        });
+    }
+
+    const charts = [makeChart("c1"), makeChart("c2"), makeChart("c3")];
+    const MAX = 120;
+
+    setInterval(() => {
+        if (!latest) return;
+
+        ["M1", "M2", "M3"].forEach((k, i) => {
+            const M = latest.motors[k] || {};
+            const V = M.V || 0;
+            const I = M.current_A || 0;
+            const P = (V * I) / 1000;
+            const T = 40 + Math.random() * 5;
+
+            document.getElementById(`m${i + 1}V`).innerText = V + " V";
+            document.getElementById(`m${i + 1}I`).innerText =
+                I.toFixed(2) + " A";
+            document.getElementById(`m${i + 1}P`).innerText =
+                P.toFixed(2) + " kW";
+            document.getElementById(`m${i + 1}T`).innerText =
+                T.toFixed(1) + " °C";
+
+            const c = charts[i];
+            c.data.labels.push(new Date().toLocaleTimeString());
+            c.data.datasets[0].data.push(V);
+            c.data.datasets[1].data.push(I);
+            c.data.datasets[2].data.push(P);
+            c.data.datasets[3].data.push(T);
+
+            if (c.data.labels.length > MAX) {
+                c.data.labels.shift();
+                c.data.datasets.forEach((d) => d.data.shift());
+            }
+
+            c.update();
+        });
+    }, UI_UPDATE_MS);
+});

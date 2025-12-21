@@ -1,0 +1,605 @@
+#include <Arduino.h>
+// // ==== Serve Web Page ====
+// void handleRoot () {
+//     server.send_P (200, "text/html", index_html);
+// }
+
+// // ==== WebSocket Event ====
+// void onWebSocketEvent (uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+//     if (type == WStype_CONNECTED) {
+//         Serial.printf ("Client %u connected\n", num);
+//     }
+// }
+
+// // ==== Send JSON over WebSocket ====
+// // Note: SV and SI are floats and formatted with 3 decimal places
+// void sendData () {
+//     char buffer[128];
+//     snprintf (buffer, sizeof (buffer),
+//         "{\"NV_v\":%d,\"NV_i\":%d,\"NPT_p\":%d,\"NPT_t\":%d,\"SV\":%.3f,\"SI\":%.3f}",
+//         NV_v, NV_i, NPT_p, NPT_t, SV, SI);
+//     webSocket.broadcastTXT (buffer);
+// }
+
+// // ==== Setup ====
+// void setup () {
+//     Serial.begin (115200);
+
+//     stm32Serial.begin (115200, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
+
+//     WiFi.begin (ssid, password);
+//     Serial.print ("Connecting to WiFi");
+//     while (WiFi.status () != WL_CONNECTED) {
+//         delay (500);
+//         Serial.print (".");
+//     }
+//     Serial.println ("\nConnected!");
+//     Serial.println (WiFi.localIP ());
+
+//     server.on ("/", handleRoot);
+//     server.begin ();
+
+//     webSocket.begin ();
+//     webSocket.onEvent (onWebSocketEvent);
+// }
+
+// // ==== Loop ====
+// void loop () {
+//     server.handleClient ();
+//     webSocket.loop ();
+
+//     // Read STM32 UART line
+//         // Read STM32 UART line
+//     if (stm32Serial.available ()) {
+//         String line = stm32Serial.readStringUntil ('\n');
+//         line.trim ();               // remove \r and whitespace
+//         if (line.length () == 0) return;
+
+//         Serial.println ("RX: " + line);
+
+//         // Convert to a C string for robust parsing
+//         const char* c = line.c_str ();
+//         // find ':' position
+//         const char* colon = strchr (c, ':');
+//         if (colon == NULL) {
+//             Serial.println ("Parse error: no ':' found");
+//             sendData ();
+//             return;
+//         }
+
+//         // prefix length and prefix extraction
+//         size_t prefix_len = colon - c;
+//         String prefix = String (c, prefix_len);   // e.g. "SV", "NV", "NPT", "SI"
+//         const char* numstr = colon + 1;          // numeric part starts after ':'
+
+//         // For tags with two numbers (NV, NPT) parse separately
+//         if (prefix == "NV") {
+//             // Expect "NV:<v> <i>" possibly with signs (but usually positive)
+//             long v = 0, i = 0;
+//             // use strtol twice
+//             char* endptr = nullptr;
+//             v = strtol (numstr, &endptr, 10);
+//             while (*endptr == ' ') endptr++; // skip spaces
+//             i = strtol (endptr, NULL, 10);
+//             NV_v = (int)v;
+//             NV_i = (int)i;
+//             Serial.printf ("[NV] parsed v=%ld i=%ld\n", v, i);
+
+//         } else if (prefix == "NPT") {
+//             // Expect "NPT:<p> <t>"
+//             long p = 0, t = 0;
+//             char* endptr = nullptr;
+//             p = strtol (numstr, &endptr, 10);
+//             while (*endptr == ' ') endptr++;
+//             t = strtol (endptr, NULL, 10);
+//             NPT_p = (int)p;
+//             NPT_t = (int)t;
+//             Serial.printf ("[NPT] parsed p=%ld t=%ld\n", p, t);
+
+//         } else if (prefix == "SV") {
+//             // Expect "SV:<raw>" where raw is integer = value * 1000 (may be negative)
+//             char* endptr = nullptr;
+//             long raw = strtol (numstr, &endptr, 10);
+//             // If no digits parsed, strtol sets endptr==numstr
+//             if (endptr == numstr) {
+//                 Serial.println ("[SV] parse failed");
+//             } else {
+//                 SV = (float)raw * 150.0f / 1000.0f;
+//                 Serial.printf ("[SV] raw=%ld -> %.3f V\n", raw, SV);
+//             }
+
+//         } else if (prefix == "SI") {
+//             // Expect "SI:<raw>" where raw is integer = value * 1000 (may be negative)
+//             char* endptr = nullptr;
+//             long raw = strtol (numstr, &endptr, 10);
+//             if (endptr == numstr) {
+//                 Serial.println ("[SI] parse failed");
+//             } else {
+//                 SI = (float)raw * 15.0f / 1000.0f;
+//                 Serial.printf ("[SI] raw=%ld -> %.3f A\n", raw, SI);
+//             }
+
+//         } else {
+//             Serial.printf ("Unknown prefix: %s\n", prefix.c_str ());
+//         }
+
+//         // Send updated values (even if only some changed)
+//         sendData ();
+//     }
+// }
+
+// src/main.cpp
+#include <WiFi.h>
+#include <WebServer.h>
+#include <WebSocketsServer.h>
+#include <HardwareSerial.h>
+
+const char* ssid = "LAPTOP-CCB26F1U 5621";
+const char* password = "12345678";
+
+WebServer server (80);
+WebSocketsServer webSocket = WebSocketsServer (81);
+
+// UART to talk to STM32
+HardwareSerial stm32Serial (1); // UART1
+const int STM32_RX_PIN = 16; // change to your wiring
+const int STM32_TX_PIN = 17;
+
+// small HTML (you can replace with a larger file or SPIFFS)
+const char index_html[] PROGMEM = R"rawliteral(
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Energy Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Premium Dark Theme */
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.2);
+      --voltage-color: #ef4444; /* Red */
+      --current-color: #22c55e; /* Green */
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #334155;
+    }
+
+    h1 { margin: 0; font-weight: 300; letter-spacing: 1px; }
+    
+    .status-pill {
+      background: #334155;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      color: var(--text-muted);
+    }
+    
+    .status-pill.connected { color: #4ade80; border: 1px solid #4ade80; }
+    .status-pill.disconnected { color: #f87171; border: 1px solid #f87171; }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    /* Motor Card */
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border: 1px solid #334155;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      border-color: var(--accent);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .motor-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 0.8em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 200px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>⚡ Energy Monitor</h1>
+    <div id="connectionStatus" class="status-pill disconnected">Disconnected</div>
+  </header>
+
+  <div id="motorGrid" class="grid">
+    <!-- Motor cards will be injected here -->
+  </div>
+</div>
+
+<script>
+  const wsUrl = 'ws://' + location.hostname + ':81';
+  let ws;
+  const motors = {}; // Store chart instances and data buffers
+  const MAX_DATA_POINTS = 50; // Keep last 50 points for smooth scrolling
+
+  function initWebSocket() {
+    ws = new WebSocket(wsUrl);
+    const statusEl = document.getElementById('connectionStatus');
+
+    ws.onopen = () => {
+      console.log('WS Connected');
+      statusEl.textContent = 'Connected';
+      statusEl.className = 'status-pill connected';
+    };
+
+    ws.onclose = () => {
+      console.log('WS Disconnected');
+      statusEl.textContent = 'Disconnected';
+      statusEl.className = 'status-pill disconnected';
+      setTimeout(initWebSocket, 2000); // Auto reconnect
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const data = JSON.parse(evt.data);
+        if (data.motors) {
+          updateDashboard(data.motors);
+        }
+      } catch (e) {
+        console.error('JSON Error:', e);
+      }
+    };
+  }
+
+  function updateDashboard(motorData) {
+    const grid = document.getElementById('motorGrid');
+    
+    Object.keys(motorData).forEach(motorId => {
+      const m = motorData[motorId];
+      
+      // Create card if it doesn't exist
+      if (!motors[motorId]) {
+        createMotorCard(motorId, grid);
+      }
+      
+      // Update Metrics
+      document.getElementById(`v-${motorId}`).textContent = m.V + ' V';
+      document.getElementById(`c-${motorId}`).textContent = m.current_A + ' A';
+      
+      // Update Chart
+      const chart = motors[motorId].chart;
+      const now = new Date().toLocaleTimeString();
+      
+      chart.data.labels.push(now);
+      chart.data.datasets[0].data.push(m.V); // Voltage
+      chart.data.datasets[1].data.push(m.current_A); // Current
+      
+      // Remove old data to keep chart scrolling
+      if (chart.data.labels.length > MAX_DATA_POINTS) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+        chart.data.datasets[1].data.shift();
+      }
+      
+      chart.update();
+    });
+  }
+
+  function createMotorCard(id, container) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div class="card-header">
+        <div class="motor-name">${id}</div>
+        <div style="font-size:0.9em; color:#94a3b8">Live</div>
+      </div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Voltage</div>
+          <div class="metric-value" id="v-${id}">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Current</div>
+          <div class="metric-value" id="c-${id}">--</div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-${id}"></canvas>
+      </div>
+    `;
+    container.appendChild(div);
+
+    const ctx = document.getElementById(`chart-${id}`).getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Voltage (V)',
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            yAxisID: 'y',
+            data: [],
+            fill: true
+          },
+          {
+            label: 'Current (A)',
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            yAxisID: 'y1',
+            data: [],
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false, // Disable animation for performance
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: { labels: { color: '#94a3b8' } }
+        },
+        scales: {
+          x: {
+            display: false, // Hide time labels to save space
+            grid: { color: '#334155' }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+             grid: { color: '#334155' },
+             ticks: { color: '#ef4444' }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#22c55e' }
+          }
+        }
+      }
+    });
+
+    motors[id] = { chart: chart };
+  }
+
+  // Start
+  initWebSocket();
+</script>
+</body>
+</html>
+)rawliteral";
+
+#include <map>
+#include <string>
+
+struct Motor {
+    int V = 0;
+    int status = 0;
+    int current_mA = 0;
+    float current_A = 0.0f;
+    int rpm = 0;
+};
+
+std::map<String, Motor> motors;
+
+void handleRoot () {
+    server.send_P (200, "text/html", index_html);
+}
+
+void webSocketEvent (uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+    if (type == WStype_CONNECTED) {
+        Serial.printf ("WS client %u connected\n", num);
+    }
+}
+
+// Helper to broadcast the entire motors map as JSON
+void broadcastMotors () {
+    // build JSON manually for small memory footprint
+    String out = "{\"motors\":{";
+    bool first = true;
+    for (auto& p : motors) {
+        if (!first) out += ",";
+        first = false;
+        String key = p.first;
+        Motor m = p.second;
+        out += "\"" + key + "\":{";
+        out += "\"V\":" + String (m.V) + ",";
+        out += "\"status\":" + String (m.status) + ",";
+        out += "\"current_mA\":" + String (m.current_mA) + ",";
+        // include current in A as float with 3 decimals
+        char buf[20];
+        snprintf (buf, sizeof (buf), "%.3f", m.current_A);
+        out += "\"current_A\":" + String (buf) + ",";
+        out += "\"rpm\":" + String (m.rpm);
+        out += "}";
+    }
+    out += "}}";
+    webSocket.broadcastTXT (out);
+    Serial.println ("Broadcast: " + out);
+}
+
+void parseLine (const String& line) {
+    // Example: "NV:M1: 220 03 0660 60"
+    if (line.length () == 0) return;
+
+    // convert to cstr for strtok use
+    char buf[200];
+    line.toCharArray (buf, sizeof (buf));
+    char* saveptr = nullptr;
+
+    // first token up to ':'
+    char* tok = strtok_r (buf, ":", &saveptr);
+    if (!tok) return;
+    String prefix = String (tok);
+
+    // second token (device id)
+    char* tok2 = strtok_r (NULL, ":", &saveptr);
+    if (!tok2) {
+        // no device id - handle legacy NV:<v> <i> style if needed
+        Serial.println ("No device id found for prefix " + prefix);
+        return;
+    }
+    String dev = String (tok2);
+    dev.trim ();
+
+    // third part: the numeric tokens (space separated)
+    char* rest = strtok_r (NULL, "\n", &saveptr);
+    if (!rest) return;
+    // now parse space separated numbers
+    // we expect up to 4 numbers
+    int vals[8];
+    int vcount = 0;
+    char* p = strtok (rest, " ");
+    while (p && vcount < 8) {
+        if (strlen (p) > 0) {
+            vals[vcount++] = atoi (p);
+        }
+        p = strtok (NULL, " ");
+    }
+
+    // We only implemented NV handling here; you can add other prefixes similarly
+    if (prefix == "NV") {
+        Motor m;
+        if (vcount >= 1) m.V = vals[0];
+        if (vcount >= 2) m.status = vals[1];
+        if (vcount >= 3) {
+            m.current_mA = vals[2];
+            m.current_A = ((float)m.current_mA) / 1000.0f;
+        }
+        if (vcount >= 4) m.rpm = vals[3];
+        motors[dev] = m;
+        Serial.printf ("[NV] %s -> V=%d st=%d cur_mA=%d rpm=%d\n",
+            dev.c_str (), m.V, m.status, m.current_mA, m.rpm);
+    } else {
+        Serial.printf ("Unhandled prefix: %s\n", prefix.c_str ());
+    }
+
+    // Broadcast after each parse
+    broadcastMotors ();
+}
+
+void setup () {
+    Serial.begin (115200);
+    stm32Serial.begin (115200, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
+
+    WiFi.begin (ssid, password);
+    Serial.print ("Connecting to WiFi");
+    while (WiFi.status () != WL_CONNECTED) {
+        delay (300);
+        Serial.print (".");
+    }
+    Serial.println ();
+    Serial.print ("Connected, IP: ");
+    Serial.println (WiFi.localIP ());
+
+    server.on ("/", handleRoot);
+    server.begin ();
+
+    webSocket.begin ();
+    webSocket.onEvent (webSocketEvent);
+
+    Serial.println ("Server ready.");
+}
+
+void loop () {
+    server.handleClient ();
+    webSocket.loop ();
+
+    // Read line from STM32 UART
+    if (stm32Serial.available ()) {
+        String line = stm32Serial.readStringUntil ('\n');
+        line.trim ();
+        if (line.length () == 0) return;
+        Serial.println ("RX: " + line);
+        parseLine (line);
+    }
+}
+
+// void loop () {
+//     // Just pump raw UART bytes to Serial
+//     while (stm32Serial.available ()) {
+//         char c = stm32Serial.read ();
+//         Serial.write (c);   // prints exactly what comes from STM32
+//     }
+// }
+

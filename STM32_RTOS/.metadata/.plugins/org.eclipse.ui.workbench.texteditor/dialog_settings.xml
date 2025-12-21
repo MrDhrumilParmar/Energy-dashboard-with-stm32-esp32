@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<item key="replaceBarOpen" value="true"/>
+	<list key="replacehistory">
+		<item value="\r\n"/>
+		<item value="MAX_PRINT_LEN"/>
+		<item value="(*m)."/>
+		<item value="."/>
+		<item value="m3"/>
+		<item value="M3"/>
+		<item value="m2"/>
+		<item value="M2"/>
+		<item value="fault_no"/>
+		<item value="log"/>
+		<item value="NOTIFY_VAL"/>
+		<item value="HEARTBEAT_BIT"/>
+		<item value="ParaCalcTaskHandle"/>
+		<item value="ADC_AVG"/>
+		<item value="ADC_SUM"/>
+	</list>
+	<list key="searchhistory">
+		<item value="notify"/>
+		<item value="Print_Helper_Handler"/>
+		<item value="PrintHelperHandle"/>
+		<item value="print"/>
+		<item value="fault"/>
+		<item value="power"/>
+		<item value="q_telemetry"/>
+		<item value="Motor_t"/>
+		<item value="\n"/>
+		<item value="UART"/>
+		<item value="SupervisorTaskHandle"/>
+		<item value="supervisorNotifyHandle"/>
+		<item value="Log_Task_Send"/>
+		<item value="q_print"/>
+		<item value="logInQueue"/>
+	</list>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="selection" value="uart"/>
+		<item key="wrap" value="true"/>
+		<item key="casesensitive" value="false"/>
+		<item key="wholeword" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="isRegEx" value="false"/>
+		<list key="findhistory">
+			<item value="uart"/>
+			<item value="Segger"/>
+		</list>
+		<list key="replacehistory">
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_X_ORIGIN" value="998"/>
+		<item key="DIALOG_Y_ORIGIN" value="335"/>
+		<item key="DIALOG_WIDTH" value="459"/>
+		<item key="DIALOG_HEIGHT" value="468"/>
+		<item key="DIALOG_FONT_NAME" value="1|Segoe UI|8.861539|0|WINDOWS|1|-16|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI"/>
+	</section>
+</section>
