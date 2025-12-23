@@ -34,7 +34,7 @@ This project reflects **real RTOS design principles used in industrial embedded 
 
 ## ⚡ System Architecture
 
-![RTOS System Architecture](docs/system_architecture.svg)
+![RTOS System Architecture](Docs/system_architecture.svg)
 
 > The diagram shows task separation, ISR handoff, queues, fault handling, logging, and supervision flow on the STM32.
 
@@ -102,12 +102,12 @@ Logging is non-blocking and designed to avoid priority inversion.
 
 **Live Web Dashboard (ESP32):**
 
-![Dashboard Screenshot](docs/dashboard.png)
+![Dashboard Screenshot](Docs/dashboard.png)
 
 > Real-time visualization of 3-motor machine telemetry (V/I/P/T), fault status, and system health streamed from the STM32 edge node.
 
 **RTOS Task Execution Trace (SEGGER SystemView):**
 
-![SystemView Trace](docs/systemview.png)
+![SystemView Trace](Docs/systemview.png)
 
 > FreeRTOS task scheduling, ISR activity, and inter-task communication showing bounded execution time and deterministic behavior under load.
