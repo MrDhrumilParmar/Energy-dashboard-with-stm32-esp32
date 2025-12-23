@@ -12,7 +12,7 @@
 #define WIFI_PASSWORD "12345678"
 
 // Toggle for testing
-#define USE_DUMMY false
+#define USE_DUMMY true
 
 // UART pins (only used when USE_DUMMY==false)
 #define STM32_RX_PIN 16

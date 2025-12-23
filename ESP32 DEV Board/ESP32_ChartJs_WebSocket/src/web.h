@@ -412,7 +412,7 @@ canvas {
 */
 
 window.addEventListener("DOMContentLoaded", () => {
-    const UI_UPDATE_MS = 3000;
+    const UI_UPDATE_MS = 500;
 
     Chart.defaults.font.family =
         'system-ui, -apple-system, "Segoe UI", Roboto, Arial';
@@ -449,8 +449,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     function updateScale(scale, value, minLimit = 0) {
         // ignore non-positive values (keeps axis stable)
-        if (value <= 0 || !isFinite(value))
-            return;
+        if (value <= 0 || !isFinite(value)) return;
         // grow quickly if close to max
         if (value > scale.max * 0.9) {
             scale.max = Math.max(value * SCALE_MARGIN, scale.max);
@@ -642,10 +641,10 @@ window.addEventListener("DOMContentLoaded", () => {
             const M = motorCache[key] || {};
 
             const V = Number(M.V || 0);
-            const I = Number(M.current_A || 0);
-            const P = (V * I) / 1000;
-             const T = 40 + Math.random() * 5;
-            // const T = M.temp_C !== undefined ? Number(M.temp_C) : NaN; #CHANGED2
+            const I = Number(M.I || 0);
+            // Backend sends Power in Watts, convert to kW
+            const P = Number(M.P || 0) / 1000.0;
+            const T = Number(M.T || 0);
 
             totalPower += isFinite(P) ? P : 0;
 
