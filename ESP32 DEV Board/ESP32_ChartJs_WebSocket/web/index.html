@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Realtime Energy Monitoring</title>
+
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <div class="navbar">Realtime Energy Monitoring</div>
+
+        <div class="container">
+            <main class="main">
+                <!-- Motor 1 -->
+                <section class="card motor-card">
+                    <div class="card-header">
+                        <div class="title">Motor 1 &ndash; Conveyor Belt</div>
+                        <div class="badge">Healthy</div>
+                    </div>
+
+                    <div class="metrics large-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="m1V">0 V</div>
+                            <div class="metric-label v">Voltage</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m1I">0 A</div>
+                            <div class="metric-label i">Current</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m1P">0 kW</div>
+                            <div class="metric-label p">Power</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m1T">0 °C</div>
+                            <div class="metric-label t">Temp</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrap">
+                        <canvas id="c1"></canvas>
+                    </div>
+                </section>
+
+                <!-- Motor 2 -->
+                <section class="card motor-card">
+                    <div class="card-header">
+                        <div class="title">Motor 2 &ndash; Hydraulic Pump</div>
+                        <div class="badge">Healthy</div>
+                    </div>
+
+                    <div class="metrics large-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="m2V">0 V</div>
+                            <div class="metric-label v">Voltage</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m2I">0 A</div>
+                            <div class="metric-label i">Current</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m2P">0 kW</div>
+                            <div class="metric-label p">Power</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m2T">0 °C</div>
+                            <div class="metric-label t">Temp</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrap">
+                        <canvas id="c2"></canvas>
+                    </div>
+                </section>
+
+                <!-- Motor 3 -->
+                <section class="card motor-card">
+                    <div class="card-header">
+                        <div class="title">Motor 3 &ndash; Cooling Fan</div>
+                        <div class="badge">Healthy</div>
+                    </div>
+
+                    <div class="metrics large-metrics">
+                        <div class="metric">
+                            <div class="metric-value" id="m3V">0 V</div>
+                            <div class="metric-label v">Voltage</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m3I">0 A</div>
+                            <div class="metric-label i">Current</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m3P">0 kW</div>
+                            <div class="metric-label p">Power</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="m3T">0 °C</div>
+                            <div class="metric-label t">Temp</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrap">
+                        <canvas id="c3"></canvas>
+                    </div>
+                </section>
+            </main>
+
+            <aside class="side">
+                <div class="card total-card">
+                    <div class="totalKW">
+                        <div class="total-label">Total System Power</div>
+                        <div class="total-value" id="totalPower">0.0 kW</div>
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn start">START SYSTEM</button>
+                        <button class="btn stop">STOP SYSTEM</button>
+                    </div>
+                </div>
+
+                <div class="card log-card">
+                    <div class="log-title">Event Log</div>
+                    <div class="event-log" id="eventLog">
+                        <div class="log-item">
+                            09:00 AM - System Started (Info)
+                        </div>
+                        <div class="log-item">
+                            10:42 AM - M2 Current Spike (Warning)
+                        </div>
+                    </div>
+                    <button class="btn export">Export Data CSV</button>
+                </div>
+            </aside>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="app.js"></script>
+    </body>
+</html>

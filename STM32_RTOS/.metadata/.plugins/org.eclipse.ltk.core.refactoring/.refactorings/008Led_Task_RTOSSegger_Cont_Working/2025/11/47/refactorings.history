@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;008Led_Task_RTOSSegger_Cont_Working/008Led_Task.ioc&apos; to &apos;008Led_Task_RTOSSegger_Cont_Working.ioc&apos;" description="Rename resource &apos;008Led_Task.ioc&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="008Led_Task.ioc" name="008Led_Task_RTOSSegger_Cont_Working.ioc" stamp="1763479146888" updateReferences="true"/>
+</session>

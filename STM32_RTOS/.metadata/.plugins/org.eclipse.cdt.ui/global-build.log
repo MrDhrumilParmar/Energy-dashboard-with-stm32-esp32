@@ -1,0 +1,28 @@
+03:59:39 **** Incremental Build of configuration Debug for project 016Task2_ADC_USART ****
+make -j12 all 
+arm-none-eabi-size  016Task2_ADC_USART.elf 
+   text	   data	    bss	    dec	    hex	filename
+  58292	    472	  81120	 139884	  2226c	016Task2_ADC_USART.elf
+Finished building: default.size.stdout
+ 
+03:59:45 **** Incremental Build of configuration Debug for project 016Task2_ADC_USART ****
+make -j12 all 
+arm-none-eabi-size  016Task2_ADC_USART.elf 
+   text	   data	    bss	    dec	    hex	filename
+  58292	    472	  81120	 139884	  2226c	016Task2_ADC_USART.elf
+Finished building: default.size.stdout
+ 
+04:06:29 **** Incremental Build of configuration Debug for project 016Task2_ADC_USART ****
+make -j12 all 
+arm-none-eabi-gcc "../AppFiles/Src/process.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I"D:/RTOS STM Project/RTOS Workspace/Common/Third_Party/FreeRTOS/include" -I"D:/RTOS STM Project/RTOS Workspace/Common/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F" -I"D:/RTOS STM Project/RTOS Workspace/Common/Third_Party/SEGGER/Config" -I"D:/RTOS STM Project/RTOS Workspace/Common/Third_Party/SEGGER/OS" -I"D:/RTOS STM Project/RTOS Workspace/Common/Third_Party/SEGGER/SEGGER" -I"D:/RTOS STM Project/Energy-dashboard-with-stm32-esp32/STM32_RTOS/016Task2_ADC_USART/AppFiles" -I"D:/RTOS STM Project/Energy-dashboard-with-stm32-esp32/STM32_RTOS/016Task2_ADC_USART/AppFiles/Inc" -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"AppFiles/Src/process.d" -MT"AppFiles/Src/process.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "AppFiles/Src/process.o"
+arm-none-eabi-gcc -o "016Task2_ADC_USART.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\RTOS STM Project\Energy-dashboard-with-stm32-esp32\STM32_RTOS\016Task2_ADC_USART\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="016Task2_ADC_USART.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: 016Task2_ADC_USART.elf
+ 
+arm-none-eabi-size  016Task2_ADC_USART.elf 
+arm-none-eabi-objdump -h -S 016Task2_ADC_USART.elf  > "016Task2_ADC_USART.list"
+   text	   data	    bss	    dec	    hex	filename
+  58772	    472	  81120	 140364	  2244c	016Task2_ADC_USART.elf
+Finished building: default.size.stdout
+ 
+Finished building: 016Task2_ADC_USART.list
+ 

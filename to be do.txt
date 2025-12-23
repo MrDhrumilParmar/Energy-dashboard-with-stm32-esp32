@@ -1,0 +1,14 @@
+Must 
+
+-> WatchDog add in code 
+-> add Basic CRC in code 
+-> test Fault protection logic, (dosnt know if it worked or not)
+-> add ESP side code for Fault detection and show on display
+-> add actual ESP and check 
+-> add timestamp in fault and 
+-> also enable RTC for actual timestamp.
+
+Optional
+
+-> Add MODBUS protocol here,
+-> add provision to multiple Slave(stm32)

@@ -1,0 +1,263 @@
+/* =========================================================
+   BASE / RESET
+   ========================================================= */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 10px; /* GLOBAL SCALE — makes UI less zoomed */
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    background: #f1f4f6;
+    color: #1f2933;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+.navbar {
+    background: #ffffff;
+    padding: 1rem 1.6rem;
+    font-size: 1.8rem;
+    font-weight: 800;
+    border-bottom: 1px solid #e6e9ec;
+    color: #0f1720;
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+.container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    padding-left: 6em;
+    padding-right: 6em;
+    align-items: start;
+}
+
+.main {
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+/* =========================================================
+   CARD BASE
+   ========================================================= */
+.card {
+    background: #ffffff;
+    border-radius: 0.8rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+    margin-bottom: 1.4rem;
+    box-shadow: 0 6px 18px rgba(18, 24, 34, 0.08);
+}
+
+/* =========================================================
+   CARD HEADER
+   ========================================================= */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #0b1220a1;
+}
+
+/* =========================================================
+   STATUS BADGE
+   ========================================================= */
+.badge {
+    background: #22c55e;
+    color: #ffffff;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+}
+
+/* =========================================================
+   METRICS (V / I / P / T)
+   ========================================================= */
+.metrics.large-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem 1.4rem;
+    margin-bottom: 1rem;
+    padding-inline: 1rem;
+}
+
+.metric {
+    text-align: left;
+}
+
+.metric-value {
+    font-size: 1.8rem; /* industrial density */
+    font-weight: 800;
+    line-height: 1.1;
+    color: #191919;
+}
+
+.metric-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 0.2rem;
+}
+
+/* =========================================================
+   METRIC COLORS
+   ========================================================= */
+.v {
+    color: #1f77b4;
+} /* Voltage */
+.i {
+    color: #ff7f0e;
+} /* Current */
+.p {
+    color: #6f42c1;
+} /* Power */
+.t {
+    color: #d62828;
+} /* Temperature */
+
+/* =========================================================
+   TOTAL POWER HIGHLIGHT
+   ========================================================= */
+.totalKW {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 0.7rem;
+    background: #edf1f2;
+    margin-bottom: 1rem;
+}
+
+.total-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.4rem;
+}
+
+.total-value {
+    font-size: 2.3rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+/* =========================================================
+   CHART AREA
+   ========================================================= */
+.chart-wrap {
+    margin-top: 0.4rem;
+}
+
+canvas {
+    width: 100% !important;
+    height: 10rem !important; /* compact but readable */
+    display: block;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.btn {
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: 0.6rem;
+    border: none;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn.start {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.btn.stop {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.export {
+    background: #aab6cf6e;
+    color: #111827;
+}
+
+/* =========================================================
+   EVENT LOG
+   ========================================================= */
+.log-card .log-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+.event-log {
+    background: #efefefb8;
+    border: 1px solid #e6e6e6;
+    border-radius: 0.6rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    height: 12rem;
+    overflow-y: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+        monospace;
+    font-size: 0.85rem;
+    color: #333;
+}
+
+.log-item {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed #e5e7eb;
+}
+
+/* =========================================================
+   RESPONSIVE (MOBILE / SMALL SCREENS)
+   ========================================================= */
+@media (max-width: 980px) {
+    .container {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+
+    .total-value {
+        font-size: 2rem;
+    }
+
+    canvas {
+        height: 7rem !important;
+    }
+}

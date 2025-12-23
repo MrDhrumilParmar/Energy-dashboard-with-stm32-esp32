@@ -1,0 +1,7 @@
+1762710279031	Rename resource '015Task2_ADC_USART.ioc'
+1762711495539	Move 'Src' to 'AppFiles'
+1762711934798	Move 'usart.c' to 'Inc'
+1762711967431	Move 'process.h' to 'Inc'
+1762711973692	Move 'measurement.c' to 'Src'
+1762711977331	Move 'usart.c' to 'Src'
+1762712021870	Move 'process.c' to 'Src'
