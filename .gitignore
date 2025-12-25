@@ -54,3 +54,6 @@ dkms.conf
 # debug information files
 *.dwo
 *.mp4
+
+*.txt
+TO DO.txt
